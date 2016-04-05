@@ -1,0 +1,35 @@
+#import <Foundation/Foundation.h>
+
+@interface NSObject (WTModel) <NSCoding>
+
+/**
+*  初始化model
+*
+*  @param object 一个data或
+*
+*  @return 返回model对象
+*/
+- (instancetype)initWithObject:(id)object;
+
+/**
+*  归档
+*/
+- (void)archive;
+
+/**
+*  解档
+*/
++ (instancetype)unarchive;
+
+/**
+*  删档
+*/
++ (BOOL)removeArchive;
+
+/**
+*  返回当前对象的属性列表
+*/
+- (NSArray *)propertyList;
+
+@end
+

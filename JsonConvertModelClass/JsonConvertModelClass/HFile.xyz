@@ -1,0 +1,7 @@
+#import <Foundation/Foundation.h>
+#import "NSObject+WTModel.h"
+
+@interface @ClassName@ : NSObject
+
+@property@
+@end

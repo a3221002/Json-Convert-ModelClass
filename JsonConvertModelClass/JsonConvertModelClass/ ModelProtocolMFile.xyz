@@ -1,0 +1,180 @@
+#import "NSObject+WTModel.h"
+
+#import <objc/runtime.h>
+
+#define kArchivePath [NSString stringWithFormat:@"%@/%@", kDocumentsPath, [self class]]
+
+@implementation NSObject (WTModel)
+
+
+#pragma mark - Init
+
+- (instancetype)initWithObject:(id)object {
+    self = [self init];
+    if (self) {
+
+        if ([object isKindOfClass:[NSDictionary class]]) {
+            [self setupPropertyWithDictionary:object];
+        }
+
+    if ([object isKindOfClass:[NSData class]]) {
+        NSDictionary *dictionary = [NSJSONSerialization JSONObjectWithData:object options:NSJSONReadingMutableContainers error:nil];
+        [self setupPropertyWithDictionary:dictionary];
+        }
+    }
+    return self;
+}
+
+
+- (void)setupPropertyWithDictionary:(NSDictionary *)dictionary {
+
+    for (NSString *key in [self propertyList]) {
+        id value = dictionary[key];
+
+        NSString *name = [NSString stringWithFormat:@"%@Model", [key capitalizedString]];
+        Class aClass = NSClassFromString(name);
+        if (aClass) {
+            if ([value isKindOfClass:[NSArray class]]) {
+                NSMutableArray *array = [NSMutableArray array];
+                for (NSDictionary *tempDict in value) {
+                    id obj = [[aClass alloc] initWithObject:tempDict];
+                    [array addObject:obj];
+                }
+
+                [self setValue:array forKey:key];
+            }
+
+            if ([value isKindOfClass:[NSDictionary class]]) {
+                id obj = [[aClass alloc] initWithObject:value];
+                [self setValue:obj forKey:key];
+            }
+        } else {
+            [self setValue:value forKey:key];
+        }
+    }
+}
+
+
+#pragma mark - Private
+
+// 对象是否为空
+- (BOOL)isEmpty:(id)value {
+    if ([value isKindOfClass:[NSString class]]) {
+        NSString *string = value;
+        if ((string == nil) ||
+            (string.length == 0) ||
+            [string isEqual:[NSNull null]]) {
+                return YES;
+        } else {
+            return NO;
+        }
+    }
+
+    if ([value isKindOfClass:[NSNumber class]]) {
+        long long integer = [value longLongValue];
+        if (integer == 0) {
+            return YES;
+        }
+        else {
+            return NO;
+        }
+    }
+
+    if ([value isKindOfClass:[NSArray class]]) {
+        NSArray *array = value;
+        if (array.count <= 0) {
+            return YES;
+        } else {
+            return NO;
+        }
+    }
+
+    if ([value isKindOfClass:[NSDictionary class]]) {
+        NSDictionary *dictionary = value;
+        if ([dictionary allKeys] <= 0) {
+            return YES;
+        } else {
+            return NO;
+        }
+    }
+
+    return YES;
+}
+
+
+#pragma mark - Public
+
+- (void)archive {
+
+    [NSKeyedArchiver archiveRootObject:self toFile:kArchivePath];
+}
+
++ (instancetype)unarchive {
+    return [NSKeyedUnarchiver unarchiveObjectWithFile:kArchivePath];
+}
+
++ (BOOL)removeArchive {
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+
+    if ([fileManager fileExistsAtPath:kArchivePath]) {
+
+        return [fileManager removeItemAtPath:kArchivePath error:nil];
+    }
+
+    return NO;
+}
+
+- (NSArray *)propertyList {
+
+    Class aClass = [self class];
+    NSMutableArray *propertyNames = [NSMutableArray array];
+
+    while (aClass != [NSObject class]) {
+
+        unsigned int propertyCount;
+        objc_property_t *propertyList = class_copyPropertyList(aClass, &propertyCount);
+
+        for (int i=0; i<propertyCount; i++) {
+
+            objc_property_t property = propertyList[i];
+
+            NSString *name = [NSString stringWithUTF8String:property_getName(property)];
+
+            [propertyNames addObject:name];
+        }
+
+        aClass = [aClass superclass];
+    }
+
+    return propertyNames;
+}
+
+
+
+#pragma mark - NSCoding
+
+- (instancetype)initWithCoder:(NSCoder *)aDecoder {
+
+    self = [self init];
+    if (self) {
+        for (NSString *name in [self propertyList]) {
+            id value = [aDecoder decodeObjectForKey:name];
+            if ([self isEmpty:value]) {
+                continue;
+            }
+            [self setValue:value forKey:name];
+        }
+    }
+
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)aCoder {
+
+    for (NSString *name in [self propertyList]) {
+        [aCoder encodeObject:[self valueForKey:name] forKey:name];
+    }
+}
+
+@end
