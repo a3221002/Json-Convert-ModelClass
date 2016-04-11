@@ -9,10 +9,11 @@
 #import "ViewController.h"
 
 @interface ViewController ()
-
-@property (weak) IBOutlet NSTextField *textField;
+@property (strong, nonatomic) NSArray   *systemKeywords;
+@property (weak) IBOutlet NSButton      *generateButton;
+@property (weak) IBOutlet NSTextField   *classNameTextField;
+@property (weak) IBOutlet NSTextField   *systemKeywordsTextField;
 @property (unsafe_unretained) IBOutlet NSTextView *textView;
-@property (weak) IBOutlet NSButton *generateButton;
 
 @end
 
@@ -31,7 +32,7 @@
 
 - (IBAction)generateButtonOnClicked:(NSButton *)sender {
     
-    NSString *className = [self.textField.stringValue capitalizedString];
+    NSString *className = [self.classNameTextField.stringValue capitalizedString];
  
     NSError *error;
     
@@ -48,7 +49,7 @@
     // 生成class文件
     [self generateClassWithClassName:className data:jsonDictionary];
     
-    self.textView.string = @"转换成功，文件已放到您的桌面！若有系统关键字还请自行更改。";
+    self.textView.string = @"转换成功，文件已放到您的桌面！";
 }
 
 - (void)generateClassWithClassName:(NSString *)className data:(id)obj {
@@ -132,13 +133,21 @@
     NSString *mFilePath = [[NSBundle mainBundle] pathForResource:@" ModelProtocolMFile" ofType:@"xyz"];
     NSMutableString *mFile = [NSMutableString stringWithContentsOfFile:mFilePath encoding:NSUTF8StringEncoding error:nil];
     
-    
     NSString *savePath = [NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES) lastObject];
     NSString *hSavePath = [NSString stringWithFormat:@"%@/NSObject+WTModel.h", savePath];
     NSString *mSavePath = [NSString stringWithFormat:@"%@/NSObject+WTModel.m", savePath];
     
     [hFile writeToFile:hSavePath atomically:NO encoding:NSUTF8StringEncoding error:nil];
     [mFile writeToFile:mSavePath atomically:NO encoding:NSUTF8StringEncoding error:nil];
+    // id,class,description
+}
+
+
+#pragma mark - NSTextFieldDelegate
+
+- (BOOL)control:(NSControl *)control textShouldEndEditing:(NSText *)fieldEditor {
+    self.systemKeywords = nil;
+    return YES;
 }
 
 
@@ -152,13 +161,23 @@
 
 - (NSString *)verifySystemkeyword:(NSString *)text {
     
-    if ([text isEqualToString:@"id"] ||
-        [text isEqualToString:@"class"] ||
-        [text isEqualToString:@"description"]) {
+    if ([self.systemKeywords containsObject:text]) {
         
         return [NSString stringWithFormat:@"a%@", [text capitalizedString]];
     }
     return text;
+}
+
+
+#pragma mark - Custom Accessors
+
+- (NSArray *)systemKeywords {
+    
+    if (_systemKeywords == nil) {
+        _systemKeywords = [self.systemKeywordsTextField.stringValue componentsSeparatedByString:@","];
+    }
+    
+    return _systemKeywords;
 }
 
 @end
